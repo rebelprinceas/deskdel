@@ -1,18 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Portrait V35 - Advanced Logic</title>
+    <title>Discord Portrait V37 - Final Real-Chat Engine</title>
     <style>
         :root {
             --bg-color: #36393f;
             --text-color: #dcddde;
             --timestamp-color: #72767d;
-            --mention-bg: rgba(88, 101, 242, 0.3);
-            --mention-text: #00aff4; /* Mention Blue */
-            --online: #3ba55d;
-            --offline: #ed4245;
+            --blurple: #5865f2;
         }
 
         html, body {
@@ -24,90 +21,48 @@
         }
 
         #render-area { flex: 1; display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; }
-        #scale-wrapper { transform-origin: center center; display: flex; }
+        #scale-wrapper { transform-origin: center center; display: flex; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         
         #render-frame {
             width: 1080px; height: 1920px;
             background: var(--bg-color);
             position: relative; display: flex; flex-direction: column;
             overflow: hidden;
-            transition: transform 0.3s ease; /* For future zoom effects */
         }
 
-        /* --- SMOOTH SCROLL (स्मूथ स्क्रॉल) --- */
-        #chat-scroller { 
-            flex: 1; padding: 60px 50px; 
-            display: flex; flex-direction: column; 
-            justify-content: flex-end; 
-            overflow: hidden; 
-            z-index: 5;
-            scroll-behavior: smooth; 
-        }
+        #chat-scroller { flex: 1; padding: 60px 50px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
 
         .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; }
-        .msg-block.compact { margin-top: 6px; padding-left: 110px; }
+        .msg-block.compact { margin-top: 8px; padding-left: 110px; }
         
-        /* Avatar & Smart Status */
         .avatar-container { position: relative; width: 95px; height: 95px; margin-right: 20px; flex-shrink: 0; }
-        .avatar { 
-            width: 100%; height: 100%; 
-            border-radius: 50%; 
-            object-fit: cover; 
-            border: 3px solid rgba(255,255,255,1);
-        }
-
-        /* --- STATUS DOT LOGIC (स्टेटस डॉट) --- */
-        .status-dot {
-            position: absolute; bottom: 2px; right: 2px;
-            width: 25px; height: 25px;
-            border-radius: 50%;
-            border: 6px solid var(--bg-color);
-            background: var(--online);
-            transition: background 0.3s ease;
-        }
-        .status-dot.red { background: var(--offline); }
+        .avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
 
         .msg-body { flex: 1; max-width: 850px; }
-        .user-header { display: flex; align-items: baseline; margin-bottom: 5px; }
-        .username { font-size: 42px; font-weight: bold; margin-right: 20px; } 
-        .timestamp { font-size: 24px; color: var(--timestamp-color); }
-        
-        /* --- BLUE MENTIONS (@everyone) --- */
-        .mention-tag { 
-            color: var(--mention-text); 
-            background: var(--mention-bg); 
-            padding: 2px 8px; 
-            border-radius: 6px; 
-            font-weight: 500;
-        }
-        
+        .user-header { display: flex; align-items: center; margin-bottom: 5px; }
+        .username { font-size: 42px; font-weight: bold; margin-right: 15px; } 
+        .timestamp { font-size: 26px; color: var(--timestamp-color); }
+
         .text-content { font-size: 44px; color: var(--text-color); line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; margin: 0; }
 
-        .media-gif { margin-top: 20px; border-radius: 20px; max-width: 100%; height: auto; border: 2px solid rgba(255,255,255,0.05); }
-        .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 100%; height: auto; border: 2px solid rgba(255,255,255,0.05); background: #000; }
-
-        .full-screen-video-player {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: contain; z-index: 100; background: rgba(0,0,0,0.96);
-            display: none; 
+        /* --- GIF SIZE FIX (GIF साइज सुधार) --- */
+        .media-gif, .media-thumbnail { 
+            margin-top: 20px; border-radius: 20px; 
+            width: 100%; /* Force full width of container */
+            height: auto; 
+            border: 2px solid rgba(255,255,255,0.05); 
         }
 
-        #countdown-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 30000;
-            justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: #5865f2;
-        }
+        #typing-box { padding: 0 115px 20px; font-size: 32px; color: var(--timestamp-color); display: none; }
 
-        #overlay, .modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.98); z-index: 20000; 
-            display: flex; justify-content: center; align-items: center; flex-direction: column;
-        }
+        #countdown-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 30000; justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: var(--blurple); }
+
+        #overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 20000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 85%; text-align: center; }
-        textarea { width: 100%; height: 250px; background: #40444b; color: white; border-radius: 10px; padding: 15px; font-size: 18px; border:none; margin-bottom: 10px;}
-        button { padding: 16px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 10px; border: none; background: #5865f2; color: white; width: 100%; margin-top: 10px; }
+        textarea { width: 100%; height: 300px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
+        button { padding: 20px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 12px; border: none; background: var(--blurple); color: white; width: 100%; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -116,9 +71,9 @@
 
     <div id="overlay">
         <div class="modal-box">
-            <h2>📜 Discord Portrait V35</h2>
-            <textarea id="scriptInput" placeholder="[Delulu]: @everyone Hey! 🌈"></textarea>
-            <button onclick="scanAssets()">Scan Assets & Start ➡️</button>
+            <h2>📜 Script Input</h2>
+            <textarea id="scriptInput" placeholder="Paste your script here..."></textarea>
+            <button onclick="scanAssets()">Scan Assets & Prepare ➡️</button>
         </div>
     </div>
 
@@ -126,23 +81,17 @@
         <div class="modal-box">
             <h2>🖼️ Asset Preloader</h2>
             <div id="media-list" style="margin-bottom: 20px;"></div>
-            <button onclick="startTimer()" style="background:#3ba55d;">Start 5s Timer 🚀</button>
+            <button onclick="prepareRecording()" style="background:#3ba55d;">🚀 Start Recording Mode</button>
         </div>
-    </div>
-
-    <div id="ui-layer" style="width: 100%; background: #222; padding: 10px; display: flex; gap: 10px; z-index: 10001;">
-        <button onclick="document.documentElement.requestFullscreen()">📺 Full</button>
-        <button onclick="autoPlay()">▶️ Play</button>
-        <button onclick="location.reload()" style="background:#4f545c;">🔄 Reset</button>
-        <div id="counter" style="color: white; align-self: center; margin-left: auto; font-family: monospace;">0/0</div>
     </div>
 
     <div id="render-area">
         <div id="scale-wrapper">
             <div id="render-frame">
-                <video id="overlay-player" class="full-screen-video-player" muted playsinline></video>
+                <video id="overlay-player" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index:100; background:#000; display:none;" muted playsinline></video>
                 <div id="chat-scroller"></div>
-                <div style="height:200px; padding:0 50px 80px; display:flex; align-items:center;">
+                <div id="typing-box"><span id="typer-name"></span> is typing...</div>
+                <div style="height:180px; padding:0 50px 80px; display:flex; align-items:center;">
                     <div style="background:#40444b; width:100%; height:100px; border-radius:50px; display:flex; align-items:center; padding:0 40px; font-size:36px; color:#72767d;">Message...</div>
                 </div>
             </div>
@@ -154,6 +103,7 @@
         let script = [];
         let index = -1;
         let lastUser = null;
+        let chatClock = new Date(); // Internal clock for simulation
         const assetCache = {}; 
 
         function getUserColor(name) {
@@ -163,17 +113,13 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        // --- TAG FORMATTER (टैग फ़ॉर्मेटर) ---
-        function formatTags(text) {
-            return text.replace(/(@\w+)/g, '<span class="mention-tag">$1</span>');
-        }
-
-        // --- SMART STATUS LOGIC (स्टेटस लॉजिक) ---
-        function isUserReturning(user, currentIdx) {
-            for (let i = currentIdx + 1; i < script.length; i++) {
-                if (script[i].toLowerCase().includes(`[${user.toLowerCase()}]`)) return true;
+        // --- TIME SIMULATION (समय सिमुलेशन) ---
+        function getSimulatedTime(idx) {
+            if (idx > 0 && idx % 3 === 0) {
+                // Advance clock by 1-2 minutes every 3 messages
+                chatClock.setMinutes(chatClock.getMinutes() + Math.floor(Math.random() * 2) + 1);
             }
-            return false;
+            return chatClock.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
         function scanAssets() {
@@ -187,10 +133,10 @@
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('asset-modal').style.display = 'flex';
             const list = document.getElementById('media-list');
-            list.innerHTML = mediaFiles.size > 0 ? "" : "<p>Ready.</p>";
+            list.innerHTML = "";
             mediaFiles.forEach(file => {
                 const item = document.createElement('div');
-                item.style.marginBottom = "10px";
+                item.style.marginBottom = "15px";
                 item.innerHTML = `<label style="color:#aaa;">Upload ${file}:</label><br><input type="file" onchange="cacheFile('${file}', this)">`;
                 list.appendChild(item);
             });
@@ -201,27 +147,25 @@
             if (file) assetCache[name] = URL.createObjectURL(file);
         }
 
-        function startTimer() {
+        // --- MOBILE FULLSCREEN & TIMER START ---
+        function prepareRecording() {
             document.getElementById('asset-modal').style.display = 'none';
+            
+            // Trigger Fullscreen [Required for Mobile Browsers]
+            const doc = document.documentElement;
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+
             adjustScale();
             let timer = 5;
             const overlay = document.getElementById('countdown-overlay');
             overlay.style.display = 'flex'; overlay.innerText = timer;
+            
             const int = setInterval(() => {
                 timer--;
                 if (timer > 0) overlay.innerText = timer;
                 else { clearInterval(int); overlay.style.display = 'none'; autoPlay(); }
             }, 1000);
-        }
-
-        // PFP Case-Insensitive Variations
-        function getPfpVariations(user) {
-            return [
-                `assets/pfps/${user}.png`,
-                `assets/pfps/${user.toLowerCase()}.png`,
-                `assets/pfps/${user.charAt(0).toUpperCase() + user.slice(1).toLowerCase()}.png`,
-                `assets/pfps/default.png`
-            ];
         }
 
         async function render(idx) {
@@ -230,33 +174,37 @@
             if (!match) return;
 
             const user = match[1].trim();
-            const content = formatTags(match[2].trim());
-            const mediaMatch = match[2].match(/<media:\s*(.*?)\s*>/);
+            const content = match[2].trim();
+            const mediaMatch = content.match(/<media:\s*(.*?)\s*>/);
 
             const isCompact = (lastUser && lastUser.toLowerCase() === user.toLowerCase());
+            const chatScroller = document.getElementById('chat-scroller');
+            const typingBox = document.getElementById('typing-box');
+            const typerName = document.getElementById('typer-name');
+
+            // --- TYPING INDICATOR (टाइपिंग इंडिकेटर) ---
+            if (!isCompact) {
+                typerName.innerText = user;
+                typingBox.style.display = 'block';
+                await new Promise(r => setTimeout(r, 800)); // Show typing for a bit
+                typingBox.style.display = 'none';
+            }
+
             const block = document.createElement('div');
             block.className = `msg-block ${isCompact ? 'compact' : ''}`;
-            
             messageSound.currentTime = 0; messageSound.play();
 
             let html = '';
             if (!isCompact) {
-                const variations = getPfpVariations(user);
-                const willReturn = isUserReturning(user, idx);
-                
                 html += `<div class="avatar-container">
-                            <img class="avatar" src="${variations[0]}" onerror="this.src='${variations[1]}'; this.onerror=()=>this.src='${variations[3]}'">
-                            <div class="status-dot ${willReturn ? '' : 'red'}"></div>
+                            <img class="avatar" src="assets/pfps/${user.toLowerCase()}.png" onerror="this.src='assets/pfps/default.png'">
                          </div>`;
-                
                 html += `<div class="msg-body">
                             <div class="user-header">
                                 <span class="username" style="color:${getUserColor(user)}">${user}</span>
-                                <span class="timestamp">Today at ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                <span class="timestamp">Today at ${getSimulatedTime(idx)}</span>
                             </div>`;
             } else { html += `<div class="msg-body">`; }
-
-            const chatScroller = document.getElementById('chat-scroller');
 
             if (mediaMatch) {
                 const fileName = mediaMatch[1];
@@ -264,37 +212,35 @@
                 const isVideo = fileName.match(/\.(mp4|webm|mov)$/i);
 
                 if (isVideo && src) {
-                    const overlayPlayer = document.getElementById('overlay-player');
-                    overlayPlayer.src = src;
-                    overlayPlayer.style.display = 'block';
-                    await overlayPlayer.play();
+                    const player = document.getElementById('overlay-player');
+                    player.src = src; player.style.display = 'block';
+                    await player.play();
                     await new Promise(res => {
-                        overlayPlayer.onended = () => { overlayPlayer.style.display = 'none'; res(); };
-                        setTimeout(() => { if(overlayPlayer.style.display !== 'none') { overlayPlayer.style.display='none'; res(); }}, 15000);
+                        player.onended = () => { player.style.display = 'none'; res(); };
+                        setTimeout(() => { player.style.display = 'none'; res(); }, 15000);
                     });
                     html += `<video class="media-thumbnail" src="${src}" controls></video>`;
-                } else if (src) {
+                } else {
                     html += `<img class="media-gif" src="${src}">`;
                 }
                 block.innerHTML += html + `</div>`;
                 chatScroller.appendChild(block);
             } else {
-                html += `<div class="text-content">${content}</div></div>`;
+                html += `<div class="text-content">${content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>')}</div></div>`;
                 block.innerHTML += html;
                 chatScroller.appendChild(block);
-                const delay = Math.max(1200, content.length * 55);
+                const delay = Math.max(1500, content.length * 50);
                 await new Promise(r => setTimeout(r, delay));
             }
 
-            // --- SMOOTH SCROLL TO BOTTOM ---
             chatScroller.scrollTo({ top: chatScroller.scrollHeight, behavior: 'smooth' });
-
             lastUser = user;
-            document.getElementById('counter').innerText = `${idx+1}/${script.length}`;
         }
 
         async function autoPlay() {
-            for (let i = index + 1; i < script.length; i++) { index = i; await render(i); }
+            for (let i = 0; i < script.length; i++) {
+                index = i; await render(i);
+            }
         }
 
         function adjustScale() {
@@ -306,4 +252,3 @@
     </script>
 </body>
 </html>
-
