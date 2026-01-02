@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Portrait V37 - Final Real-Chat Engine</title>
+    <title>Discord Portrait V38 - Smooth & Stable</title>
     <style>
         :root {
             --bg-color: #36393f;
@@ -30,6 +30,22 @@
             overflow: hidden;
         }
 
+        /* --- SCREEN SHAKE ANIMATION --- */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-3px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-active { animation: shake 0.5s; animation-iteration-count: 1; }
+
         #chat-scroller { flex: 1; padding: 60px 50px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
 
         .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; }
@@ -45,22 +61,17 @@
 
         .text-content { font-size: 44px; color: var(--text-color); line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; margin: 0; }
 
-        /* --- GIF SIZE FIX (GIF साइज सुधार) --- */
-        .media-gif, .media-thumbnail { 
-            margin-top: 20px; border-radius: 20px; 
-            width: 100%; /* Force full width of container */
-            height: auto; 
-            border: 2px solid rgba(255,255,255,0.05); 
-        }
+        .media-gif, .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 100%; height: auto; border: 2px solid rgba(255,255,255,0.05); }
 
         #typing-box { padding: 0 115px 20px; font-size: 32px; color: var(--timestamp-color); display: none; }
 
         #countdown-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 30000; justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: var(--blurple); }
 
         #overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 20000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 85%; text-align: center; }
+        .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 85%; text-align: center; max-height: 80vh; overflow-y: auto;}
         textarea { width: 100%; height: 300px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
-        button { padding: 20px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 12px; border: none; background: var(--blurple); color: white; width: 100%; }
+        button { padding: 20px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 12px; border: none; background: var(--blurple); color: white; width: 100%; margin-bottom: 10px; }
+        #pfp-status { color: #faa61a; font-weight: bold; margin-bottom: 10px; display: none; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
     </style>
@@ -72,7 +83,7 @@
     <div id="overlay">
         <div class="modal-box">
             <h2>📜 Script Input</h2>
-            <textarea id="scriptInput" placeholder="Paste your script here..."></textarea>
+            <textarea id="scriptInput" placeholder="[Delulu]: WHAT!!! This is crazy!!!"></textarea>
             <button onclick="scanAssets()">Scan Assets & Prepare ➡️</button>
         </div>
     </div>
@@ -80,8 +91,9 @@
     <div id="asset-modal" class="modal" style="display:none;">
         <div class="modal-box">
             <h2>🖼️ Asset Preloader</h2>
+            <p id="pfp-status">⏳ Preloading Profile Pics...</p>
             <div id="media-list" style="margin-bottom: 20px;"></div>
-            <button onclick="prepareRecording()" style="background:#3ba55d;">🚀 Start Recording Mode</button>
+            <button id="startBtn" onclick="preloadPfpsAndStart()" style="background:#3ba55d; display:none;">🚀 Start Recording Mode</button>
         </div>
     </div>
 
@@ -103,8 +115,9 @@
         let script = [];
         let index = -1;
         let lastUser = null;
-        let chatClock = new Date(); // Internal clock for simulation
+        let chatClock = new Date();
         const assetCache = {}; 
+        const uniqueUsers = new Set(); // Store unique users for PFP preloading
 
         function getUserColor(name) {
             const colors = ['#5865F2', '#3BA55D', '#FAA61A', '#ED4245', '#EB459E', '#A375FF', '#00AFF4'];
@@ -113,10 +126,8 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        // --- TIME SIMULATION (समय सिमुलेशन) ---
         function getSimulatedTime(idx) {
             if (idx > 0 && idx % 3 === 0) {
-                // Advance clock by 1-2 minutes every 3 messages
                 chatClock.setMinutes(chatClock.getMinutes() + Math.floor(Math.random() * 2) + 1);
             }
             return chatClock.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -127,9 +138,14 @@
             script = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const mediaRegex = /<media:\s*(.*?)\s*>/g;
             const mediaFiles = new Set();
+            
             script.forEach(line => {
                 let m; while ((m = mediaRegex.exec(line)) !== null) mediaFiles.add(m[1]);
+                // Capture users for PFP preloading
+                const userMatch = line.match(/\[(.*?)\]:/);
+                if (userMatch) uniqueUsers.add(userMatch[1].trim());
             });
+
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('asset-modal').style.display = 'flex';
             const list = document.getElementById('media-list');
@@ -140,6 +156,9 @@
                 item.innerHTML = `<label style="color:#aaa;">Upload ${file}:</label><br><input type="file" onchange="cacheFile('${file}', this)">`;
                 list.appendChild(item);
             });
+            
+            // Show start button immediately, PFPs load after click
+            document.getElementById('startBtn').style.display = 'block';
         }
 
         function cacheFile(name, input) {
@@ -147,11 +166,37 @@
             if (file) assetCache[name] = URL.createObjectURL(file);
         }
 
-        // --- MOBILE FULLSCREEN & TIMER START ---
-        function prepareRecording() {
+        // --- NEW: PFP PRELOADER BEFORE TIMER ---
+        async function preloadPfpsAndStart() {
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('media-list').style.display = 'none';
+            const status = document.getElementById('pfp-status');
+            status.style.display = 'block';
+
+            // Force browser to fetch images into memory cache
+            const preloadPromises = Array.from(uniqueUsers).map(user => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    // We don't care if it loads or fails (default will handle it), 
+                    // just that the request is made and cached.
+                    img.onload = resolve;
+                    img.onerror = resolve; 
+                    img.src = `assets/pfps/${user.toLowerCase()}.png`;
+                });
+            });
+
+            // Wait a moment for browser to cache (even if promises resolve fast)
+            await Promise.all(preloadPromises);
+            await new Promise(r => setTimeout(r, 1000)); // Extra safety buffer
+
+            status.innerText = "✅ Ready! Starting...";
+            await new Promise(r => setTimeout(r, 500));
+
             document.getElementById('asset-modal').style.display = 'none';
-            
-            // Trigger Fullscreen [Required for Mobile Browsers]
+            prepareRecording();
+        }
+
+        function prepareRecording() {
             const doc = document.documentElement;
             if (doc.requestFullscreen) doc.requestFullscreen();
             else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
@@ -176,17 +221,26 @@
             const user = match[1].trim();
             const content = match[2].trim();
             const mediaMatch = content.match(/<media:\s*(.*?)\s*>/);
+            // --- SHAKE DETECTION ---
+            const isShake = content.includes('!!!');
 
             const isCompact = (lastUser && lastUser.toLowerCase() === user.toLowerCase());
             const chatScroller = document.getElementById('chat-scroller');
             const typingBox = document.getElementById('typing-box');
             const typerName = document.getElementById('typer-name');
+            const renderFrame = document.getElementById('render-frame');
 
-            // --- TYPING INDICATOR (टाइपिंग इंडिकेटर) ---
+            // Trigger Shake
+            if (isShake) {
+                renderFrame.classList.add('shake-active');
+                setTimeout(() => renderFrame.classList.remove('shake-active'), 500);
+            }
+
             if (!isCompact) {
                 typerName.innerText = user;
                 typingBox.style.display = 'block';
-                await new Promise(r => setTimeout(r, 800)); // Show typing for a bit
+                // Slower typing indicator
+                await new Promise(r => setTimeout(r, 1000)); 
                 typingBox.style.display = 'none';
             }
 
@@ -225,11 +279,19 @@
                 }
                 block.innerHTML += html + `</div>`;
                 chatScroller.appendChild(block);
+                
+                // --- PAUSE AFTER MEDIA ---
+                // Wait 3 seconds after image/gif loads
+                await new Promise(r => setTimeout(r, 3000));
+
             } else {
                 html += `<div class="text-content">${content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>')}</div></div>`;
                 block.innerHTML += html;
                 chatScroller.appendChild(block);
-                const delay = Math.max(1500, content.length * 50);
+                
+                // --- SLOWER PACING ---
+                // Base 2000ms + 80ms per character
+                const delay = Math.max(2000, content.length * 80);
                 await new Promise(r => setTimeout(r, delay));
             }
 
