@@ -3,15 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Landscape V72 - Smart Asset Engine</title>
+    <title>Discord Landscape V74 - Visual Focus Pro</title>
     <style>
         :root {
-            --bg-color: #36393f;
-            --text-color: #dcddde;
-            --timestamp-color: #72767d;
-            --blurple: #5865f2;
-            --online-green: #3ba55d;
-            --system-yellow: #faa61a;
+            --bg-color: #36393f; --text-color: #dcddde; --timestamp-color: #72767d;
+            --blurple: #5865f2; --online-green: #3ba55d; --system-yellow: #faa61a;
         }
 
         html, body {
@@ -36,10 +32,10 @@
 
         #chat-scroller { flex: 1; padding: 60px 100px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
 
-        /* V41 MESSAGE STYLE + FOCUS ENGINE */
-        .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; transition: filter 0.5s, opacity 0.5s; }
+        /* REFINED FOCUS ENGINE (NO BLUR, 0.75 OPACITY) */
+        .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; transition: opacity 0.5s; }
         .msg-block.compact { margin-top: 8px; padding-left: 110px; }
-        .msg-block.dimmed { filter: blur(3px); opacity: 0.45; }
+        .msg-block.dimmed { opacity: 0.75; } /* Slight opacity decrease for older messages */
         
         .avatar-container { position: relative; width: 95px; height: 95px; margin-right: 25px; flex-shrink: 0; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
@@ -58,22 +54,21 @@
 
         .text-content { font-size: 44px; color: var(--text-color); line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; margin: 0; }
         
-        /* SYSTEM MESSAGE STYLING */
-        .system-msg { width: 100%; text-align: center; color: var(--system-yellow); font-size: 34px; margin: 30px 0; font-style: italic; animation: fadeIn 0.3s; transition: opacity 0.5s, filter 0.5s; }
-        .system-msg.dimmed { opacity: 0.4; filter: blur(2px); }
+        .system-msg { width: 100%; text-align: center; color: var(--system-yellow); font-size: 34px; margin: 30px 0; font-style: italic; animation: fadeIn 0.3s; transition: opacity 0.5s; }
+        .system-msg.dimmed { opacity: 0.65; }
 
-        .media-gif, .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 950px; height: auto; border: 2px solid rgba(255,255,255,0.05); }
+        .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 950px; height: auto; border: 2px solid rgba(255,255,255,0.05); }
 
         #typing-box { padding: 0 120px 20px; font-size: 32px; color: var(--timestamp-color); display: none; }
 
         #countdown-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 30000; justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: var(--blurple); }
 
-        /* V41 ASSET PICKER */
+        /* ASSET PICKER UI */
         #overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 20000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 80%; text-align: center; max-height: 85vh; overflow-y: auto;}
         textarea { width: 100%; height: 280px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
         button { padding: 20px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 12px; border: none; background: var(--blurple); color: white; width: 100%; margin-bottom: 10px; }
-        .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; margin-top: 20px; }
+        .asset-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; text-align: left; margin-top: 20px; }
         .asset-group { background: #202225; padding: 15px; border-radius: 10px; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
@@ -85,24 +80,24 @@
 
     <div id="overlay">
         <div class="modal-box">
-            <h2>📜 Script & Advance Sync V72</h2>
-            <textarea id="scriptInput" placeholder="[Delulu]: Everything is case-insensitive!&#10;<system: System Notification>&#10;[User]: <media:pic.png>"></textarea>
+            <h2>📜 Script & Focused Sync V74</h2>
+            <textarea id="scriptInput" placeholder="[Delulu]: Improved focus engine!&#10;<system: System Notification>&#10;[Sober]: <media:pic.png>"></textarea>
             <button onclick="scanAssets()">Scan Assets & Prepare ➡️</button>
         </div>
     </div>
 
     <div id="asset-modal" class="modal" style="display:none;">
         <div class="modal-box">
-            <h2>🖼️ Asset Preloader</h2>
+            <h2>🖼️ Asset Setup</h2>
             <div class="asset-grid">
                 <div class="asset-group">
-                    <h3 style="color:var(--blurple)">📦 Script Media</h3>
+                    <h3 style="color:var(--blurple)">📦 Script Media (Required)</h3>
                     <div id="media-list"></div>
                 </div>
-                <div class="asset-group">
-                    <h3 style="color:#3ba55d">👤 User PFPs (Optional)</h3>
-                    <p style="font-size:16px; color:#72767d; margin-bottom:10px;">Only upload if the file is NOT in assets/pfps/</p>
-                    <div id="pfp-list"></div>
+                <div class="asset-group" style="border-left: 2px solid #333; padding-left: 30px;">
+                    <h3 style="color:#72767d">👤 Custom PFP Overrides (Optional)</h3>
+                    <p style="font-size:14px; color:#555; margin-bottom:15px;">PascalCase PFPs work automatically.</p>
+                    <div id="pfp-list" style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
             </div>
             <button id="startBtn" onclick="initProductionFlow()" style="background:#3ba55d; margin-top:20px;">🚀 Start Production (Auto Fullscreen)</button>
@@ -123,7 +118,6 @@
     </div>
 
     <script>
-        // Use Sound from User's Logic
         const messageSound = new Audio('assets/sound/message.mp3');
         messageSound.crossOrigin = "anonymous";
         
@@ -138,7 +132,7 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        // V41 TIME SIMULATION
+        // V41 TIME LOGIC
         function getSimulatedTime(idx) {
             if (idx > 0 && idx % 3 === 0) {
                 chatClock.setMinutes(chatClock.getMinutes() + Math.floor(Math.random() * 2) + 1);
@@ -146,7 +140,6 @@
             return chatClock.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
-        // --- SCAN ASSETS & PFP LIST ---
         function scanAssets() {
             const text = document.getElementById('scriptInput').value;
             script = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -163,7 +156,7 @@
             document.getElementById('asset-modal').style.display = 'flex';
             
             const mList = document.getElementById('media-list');
-            mList.innerHTML = mediaFiles.size ? "" : "No media files found.";
+            mList.innerHTML = mediaFiles.size ? "" : "No media found.";
             mediaFiles.forEach(file => {
                 const div = document.createElement('div'); div.style.marginBottom = "10px";
                 div.innerHTML = `<label>Upload <b>${file}</b>:</label><br><input type="file" onchange="processFile('${file}', this, 'media')">`;
@@ -174,7 +167,7 @@
             pList.innerHTML = "";
             uniqueUsers.forEach(user => {
                 const div = document.createElement('div'); div.style.marginBottom = "10px";
-                div.innerHTML = `<label>PFP for <b>${user}</b>:</label><br><input type="file" onchange="processFile('${user}', this, 'pfp')">`;
+                div.innerHTML = `<label style="font-size:14px; color:#aaa;">${user}:</label> <input type="file" style="font-size:12px;" onchange="processFile('${user}', this, 'pfp')">`;
                 pList.appendChild(div);
             });
             document.getElementById('startBtn').style.display = 'block';
@@ -192,7 +185,7 @@
             }
         }
 
-        // --- AUDIO SYNC & FULLSCREEN ---
+        // --- AUDIO SYNC & RECORDING ---
         async function initProductionFlow() {
             try {
                 const frame = document.getElementById('render-frame');
@@ -222,7 +215,7 @@
         function exportVideo() {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `discord_landscape_pro_${Date.now()}.webm`; a.click();
+            a.download = `discord_landscape_v74.webm`; a.click();
         }
 
         function startCountdown() {
@@ -234,7 +227,7 @@
             }, 1000);
         }
 
-        // --- FOCUS ENGINE ---
+        // --- FOCUS ENGINE: DIM PREVIOUS CONTENT ---
         function dimOlderMessages() {
             const messages = document.querySelectorAll('.msg-block, .system-msg');
             messages.forEach(msg => msg.classList.add('dimmed'));
@@ -244,7 +237,6 @@
             const line = script[idx];
             const chatScroller = document.getElementById('chat-scroller');
 
-            // --- 1. SYSTEM MESSAGES ---
             if (line.startsWith('<system:')) {
                 dimOlderMessages();
                 const systemText = line.replace('<system:', '').replace('>', '').trim();
@@ -254,15 +246,14 @@
                 lastUser = null;
                 await new Promise(r => setTimeout(r, 1500));
             } 
-            // --- 2. REGULAR MESSAGES (V41 LOGIC) ---
             else {
-                const match = line.match(/\[(.*?)\]:\s*(.*)/);
+                const match = line.match(/\[(.*?)\]:/);
                 if (!match) return;
 
                 dimOlderMessages();
 
                 const user = match[1].trim();
-                const content = match[2].trim();
+                const content = line.split(']:')[1].trim();
                 const mediaMatch = content.match(/<media:\s*(.*?)\s*>/);
                 const isCompact = (lastUser && lastUser.toLowerCase() === user.toLowerCase());
 
@@ -281,7 +272,7 @@
                 
                 let html = '';
                 if (!isCompact) {
-                    // --- SMART PFP FALLBACK (CASE-INSENSITIVE) ---
+                    // SMART PFP CHAIN
                     const pfpSrc = pfpCache[user] || `assets/pfps/${user}.png`;
                     html += `<div class="avatar-container">
                                 <img class="avatar" src="${pfpSrc}" 
@@ -312,19 +303,17 @@
                         });
                         html += `<video class="media-thumbnail" src="${src}" controls></video>`;
                     } else {
-                        html += `<img class="media-gif" src="${src}">`;
+                        html += `<img class="media-thumbnail" src="${src}">`;
                     }
                     block.innerHTML += html + `</div>`;
                     chatScroller.appendChild(block);
                     await new Promise(r => setTimeout(r, 3000));
                 } else {
-                    // MENTION HIGHLIGHTING
+                    // @MENTION HIGHLIGHTING
                     const highlightedContent = content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>');
                     html += `<div class="text-content">${highlightedContent}</div></div>`;
                     block.innerHTML = html;
                     chatScroller.appendChild(block);
-                    
-                    // AUTO-PLAY DELAY LOGIC
                     const delay = Math.max(2000, content.length * 80);
                     await new Promise(r => setTimeout(r, delay));
                 }
