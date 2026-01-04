@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Portrait V41 - Internal Audio Downloader</title>
+    <title>Discord Landscape V71 - Full Asset & Focus Engine</title>
     <style>
         :root {
             --bg-color: #36393f;
@@ -11,6 +11,7 @@
             --timestamp-color: #72767d;
             --blurple: #5865f2;
             --online-green: #3ba55d;
+            --system-yellow: #faa61a;
         }
 
         html, body {
@@ -22,21 +23,25 @@
         }
 
         #render-area { flex: 1; display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; }
+        
+        /* 16:9 LANDSCAPE CANVAS */
         #scale-wrapper { transform-origin: center center; display: flex; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         
         #render-frame {
-            width: 1080px; height: 1920px;
+            width: 1920px; height: 1080px;
             background: var(--bg-color);
             position: relative; display: flex; flex-direction: column;
             overflow: hidden;
         }
 
-        #chat-scroller { flex: 1; padding: 60px 50px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
+        #chat-scroller { flex: 1; padding: 60px 100px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
 
-        .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; }
+        /* V41 MESSAGE BLOCK LOGIC + FOCUS ENGINE */
+        .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; transition: filter 0.5s, opacity 0.5s; }
         .msg-block.compact { margin-top: 8px; padding-left: 110px; }
+        .msg-block.dimmed { filter: blur(3px); opacity: 0.45; }
         
-        .avatar-container { position: relative; width: 95px; height: 95px; margin-right: 20px; flex-shrink: 0; }
+        .avatar-container { position: relative; width: 95px; height: 95px; margin-right: 25px; flex-shrink: 0; }
         .avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
         
         .status-dot {
@@ -46,24 +51,30 @@
             border-radius: 50%; border: 6px solid var(--bg-color);
         }
 
-        .msg-body { flex: 1; max-width: 850px; }
+        .msg-body { flex: 1; max-width: 1600px; }
         .user-header { display: flex; align-items: center; margin-bottom: 5px; }
         .username { font-size: 42px; font-weight: bold; margin-right: 15px; } 
         .timestamp { font-size: 26px; color: var(--timestamp-color); }
 
         .text-content { font-size: 44px; color: var(--text-color); line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; margin: 0; }
+        
+        /* SYSTEM MESSAGE */
+        .system-msg { width: 100%; text-align: center; color: var(--system-yellow); font-size: 34px; margin: 30px 0; font-style: italic; animation: fadeIn 0.3s; transition: opacity 0.5s, filter 0.5s; }
+        .system-msg.dimmed { opacity: 0.4; filter: blur(2px); }
 
-        .media-gif, .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 100%; height: auto; border: 2px solid rgba(255,255,255,0.05); }
+        .media-gif, .media-thumbnail { margin-top: 20px; border-radius: 20px; width: 950px; height: auto; border: 2px solid rgba(255,255,255,0.05); }
 
-        #typing-box { padding: 0 115px 20px; font-size: 32px; color: var(--timestamp-color); display: none; }
+        #typing-box { padding: 0 120px 20px; font-size: 32px; color: var(--timestamp-color); display: none; }
 
         #countdown-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 30000; justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: var(--blurple); }
 
+        /* ASSET PICKER UI */
         #overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 20000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 85%; text-align: center; max-height: 80vh; overflow-y: auto;}
-        textarea { width: 100%; height: 300px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
+        .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 80%; text-align: center; max-height: 85vh; overflow-y: auto;}
+        textarea { width: 100%; height: 280px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
         button { padding: 20px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 12px; border: none; background: var(--blurple); color: white; width: 100%; margin-bottom: 10px; }
-        #pfp-status { color: #faa61a; font-weight: bold; margin-bottom: 10px; display: none; }
+        .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; margin-top: 20px; }
+        .asset-group { background: #202225; padding: 15px; border-radius: 10px; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
     </style>
@@ -74,18 +85,26 @@
 
     <div id="overlay">
         <div class="modal-box">
-            <h2>📜 Script & Audio Engine</h2>
-            <textarea id="scriptInput" placeholder="[Delulu]: Internal audio is now active!"></textarea>
-            <button onclick="scanAssets()">Scan Assets & Prepare ➡️</button>
+            <h2>📜 Script & Full Sync Engine V71</h2>
+            <textarea id="scriptInput" placeholder="[User]: Hi!&#10;<system: System Message>&#10;[User]: <media:pic.png>"></textarea>
+            <button onclick="scanAssets()">Scan All Assets ➡️</button>
         </div>
     </div>
 
     <div id="asset-modal" class="modal" style="display:none;">
         <div class="modal-box">
-            <h2>🖼️ Asset Preloader</h2>
-            <p id="pfp-status">⏳ Preloading Profile Pics...</p>
-            <div id="media-list" style="margin-bottom: 20px;"></div>
-            <button id="startBtn" onclick="initAudioAndStart()" style="background:#3ba55d; display:none;">🚀 Start with Audio Rec</button>
+            <h2>🖼️ V41 Asset Preloader (Media & PFPs)</h2>
+            <div class="asset-grid">
+                <div class="asset-group">
+                    <h3 style="color:var(--blurple)">📦 Script Media</h3>
+                    <div id="media-list"></div>
+                </div>
+                <div class="asset-group">
+                    <h3 style="color:#3ba55d">👤 User PFPs</h3>
+                    <div id="pfp-list"></div>
+                </div>
+            </div>
+            <button id="startBtn" onclick="initProductionFlow()" style="background:#3ba55d; margin-top:20px;">🚀 Start Production (Auto Fullscreen)</button>
         </div>
     </div>
 
@@ -95,7 +114,7 @@
                 <video id="overlay-player" crossorigin="anonymous" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index:100; background:#000; display:none;" muted playsinline></video>
                 <div id="chat-scroller"></div>
                 <div id="typing-box"><span id="typer-name"></span> is typing...</div>
-                <div style="height:180px; padding:0 50px 80px; display:flex; align-items:center;">
+                <div style="height:180px; padding:0 100px 80px; display:flex; align-items:center;">
                     <div style="background:#40444b; width:100%; height:100px; border-radius:50px; display:flex; align-items:center; padding:0 40px; font-size:36px; color:#72767d;">Message...</div>
                 </div>
             </div>
@@ -103,25 +122,22 @@
     </div>
 
     <script>
+        // Use Sound from User's Logic
         const messageSound = new Audio('assets/sound/message.mp3');
         messageSound.crossOrigin = "anonymous";
-        let script = [];
-        let index = -1;
-        let lastUser = null;
-        let chatClock = new Date();
-        const assetCache = {}; 
-        const uniqueUsers = new Set();
-
-        // Audio Recording Variables
-        let audioCtx, audioDest, audioRecorder, audioChunks = [];
+        
+        let script = [], index = -1, lastUser = null, chatClock = new Date();
+        const assetCache = {}, pfpCache = {}, uniqueUsers = new Set();
+        let audioCtx, audioDest, mediaRecorder, recordedChunks = [], srcNode;
 
         function getUserColor(name) {
-            const colors = ['#5865F2', '#3BA55D', '#FAA61A', '#ED4245', '#EB459E', '#A375FF', '#00AFF4'];
+            const colors = ['#61da8e','#f1bc49','#e84545','#5865f2','#fa89c9','#57cbcb'];
             let hash = 0;
             for (let i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash); }
             return colors[Math.abs(hash) % colors.length];
         }
 
+        // V41 TIME SIMULATION LOGIC
         function getSimulatedTime(idx) {
             if (idx > 0 && idx % 3 === 0) {
                 chatClock.setMinutes(chatClock.getMinutes() + Math.floor(Math.random() * 2) + 1);
@@ -129,12 +145,13 @@
             return chatClock.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
+        // --- COMPLETE V41 SCAN + PICKER LOGIC ---
         function scanAssets() {
             const text = document.getElementById('scriptInput').value;
             script = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const mediaRegex = /<media:\s*(.*?)\s*>/g;
-            const mediaFiles = new Set();
-            
+            const mediaRegex = /<media:\s*(.*?)\s*>/g, mediaFiles = new Set();
+            uniqueUsers.clear();
+
             script.forEach(line => {
                 let m; while ((m = mediaRegex.exec(line)) !== null) mediaFiles.add(m[1]);
                 const userMatch = line.match(/\[(.*?)\]:/);
@@ -143,196 +160,184 @@
 
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('asset-modal').style.display = 'flex';
-            const list = document.getElementById('media-list');
-            list.innerHTML = "";
-            mediaFiles.forEach(file => {
-                const item = document.createElement('div');
-                item.style.marginBottom = "15px";
-                item.innerHTML = `<label style="color:#aaa;">Upload ${file}:</label><br><input type="file" onchange="cacheFile('${file}', this)">`;
-                list.appendChild(item);
-            });
             
+            // Media List Picker
+            const mList = document.getElementById('media-list');
+            mList.innerHTML = mediaFiles.size ? "" : "No media files found in script.";
+            mediaFiles.forEach(file => {
+                const div = document.createElement('div'); div.style.marginBottom = "10px";
+                div.innerHTML = `<label>Upload <b>${file}</b>:</label><br><input type="file" onchange="processFile('${file}', this, 'media')">`;
+                mList.appendChild(div);
+            });
+
+            // PFP List Picker
+            const pList = document.getElementById('pfp-list');
+            pList.innerHTML = "";
+            uniqueUsers.forEach(user => {
+                const div = document.createElement('div'); div.style.marginBottom = "10px";
+                div.innerHTML = `<label>PFP for <b>${user}</b>:</label><br><input type="file" onchange="processFile('${user}', this, 'pfp')">`;
+                pList.appendChild(div);
+            });
             document.getElementById('startBtn').style.display = 'block';
         }
 
-        function cacheFile(name, input) {
+        function processFile(name, input, type) {
             const file = input.files[0];
-            if (file) assetCache[name] = URL.createObjectURL(file);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { 
+                    if (type === 'media') assetCache[name] = e.target.result;
+                    else pfpCache[name] = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
         }
 
-        // --- AUDIO ENGINE INITIALIZATION (ऑडियो इंजन सेटअप) ---
-        async function initAudioAndStart() {
-            // Setup Web Audio API
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioDest = audioCtx.createMediaStreamDestination();
-
-            // Route Message Sound
-            const sourceMsg = audioCtx.createMediaElementSource(messageSound);
-            sourceMsg.connect(audioDest);
-            sourceMsg.connect(audioCtx.destination); // Connect to speakers too
-
-            // Route Video/Overlay Player Sound
-            const videoPlayer = document.getElementById('overlay-player');
-            const sourceVid = audioCtx.createMediaElementSource(videoPlayer);
-            sourceVid.connect(audioDest);
-            sourceVid.connect(audioCtx.destination);
-
-            // Initialize Recorder for the audio stream
-            audioRecorder = new MediaRecorder(audioDest.stream);
-            audioChunks = [];
-            audioRecorder.ondataavailable = e => audioChunks.push(e.data);
-            audioRecorder.onstop = exportAudio;
-
-            // Start preloading PFPs
-            preloadPfpsAndStart();
-        }
-
-        function exportAudio() {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `discord_audio_${Date.now()}.webm`;
-            a.click();
-            alert("Internal Audio Downloaded! Now sync this in your video editor.");
-        }
-
-        async function preloadPfpsAndStart() {
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('media-list').style.display = 'none';
-            const status = document.getElementById('pfp-status');
-            status.style.display = 'block';
-
-            const preloadPromises = Array.from(uniqueUsers).map(user => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = resolve;
-                    img.onerror = () => {
-                        const imgLow = new Image();
-                        imgLow.onload = resolve; imgLow.onerror = resolve;
-                        imgLow.src = `assets/pfps/${user.toLowerCase()}.png`;
-                    };
-                    img.src = `assets/pfps/${user}.png`;
-                });
-            });
-
-            await Promise.all(preloadPromises);
-            await new Promise(r => setTimeout(r, 1000)); 
-
-            status.innerText = "✅ Ready! Start Screen Recording NOW...";
-            await new Promise(r => setTimeout(r, 500));
-
-            document.getElementById('asset-modal').style.display = 'none';
-            prepareAnimation();
-        }
-
-        function prepareAnimation() {
-            const doc = document.documentElement;
-            if (doc.requestFullscreen) doc.requestFullscreen();
-            
-            adjustScale();
-            let timer = 5;
-            const overlay = document.getElementById('countdown-overlay');
-            overlay.style.display = 'flex'; overlay.innerText = timer;
-            
-            const int = setInterval(() => {
-                timer--;
-                if (timer > 0) overlay.innerText = timer;
-                else { 
-                    clearInterval(int); 
-                    overlay.style.display = 'none'; 
-                    audioRecorder.start(); // Start recording audio exactly when timer hits 0
-                    autoPlay(); 
+        // --- SYNC RECORDING + FULLSCREEN ENGINE ---
+        async function initProductionFlow() {
+            try {
+                const frame = document.getElementById('render-frame');
+                if (frame.requestFullscreen) await frame.requestFullscreen();
+                
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    audioDest = audioCtx.createMediaStreamDestination();
+                    srcNode = audioCtx.createMediaElementSource(messageSound);
+                    srcNode.connect(audioDest); srcNode.connect(audioCtx.destination);
                 }
+                await audioCtx.resume();
+                
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { width: 1920, height: 1080, frameRate: 60 }, audio: true });
+                const combinedStream = new MediaStream([...screenStream.getVideoTracks(), ...audioDest.stream.getAudioTracks()]);
+                
+                mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+                mediaRecorder.onstop = exportVideo;
+
+                document.getElementById('asset-modal').style.display = 'none';
+                startCountdown();
+            } catch (err) { alert("Recording Error: " + err.message); }
+        }
+
+        function exportVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `discord_landscape_pro_${Date.now()}.webm`; a.click();
+        }
+
+        function startCountdown() {
+            adjustScale(); let timer = 5; const overlay = document.getElementById('countdown-overlay');
+            overlay.style.display = 'flex'; overlay.innerText = timer;
+            const int = setInterval(() => {
+                timer--; if (timer > 0) overlay.innerText = timer;
+                else { clearInterval(int); overlay.style.display = 'none'; mediaRecorder.start(); autoPlay(); }
             }, 1000);
+        }
+
+        // --- FOCUS ENGINE: DIM PREVIOUS MESSAGES ---
+        function dimOlderMessages() {
+            const messages = document.querySelectorAll('.msg-block, .system-msg');
+            messages.forEach(msg => msg.classList.add('dimmed'));
         }
 
         async function render(idx) {
             const line = script[idx];
-            const match = line.match(/\[(.*?)\]:\s*(.*)/);
-            if (!match) return;
-
-            const user = match[1].trim();
-            const content = match[2].trim();
-            const mediaMatch = content.match(/<media:\s*(.*?)\s*>/);
-
-            const isCompact = (lastUser && lastUser.toLowerCase() === user.toLowerCase());
             const chatScroller = document.getElementById('chat-scroller');
-            const typingBox = document.getElementById('typing-box');
 
-            if (!isCompact) {
-                document.getElementById('typer-name').innerText = user;
-                typingBox.style.display = 'block';
-                await new Promise(r => setTimeout(r, 1000)); 
-                typingBox.style.display = 'none';
-            }
+            // --- 1. HANDLE SYSTEM MESSAGES ---
+            if (line.startsWith('<system:')) {
+                dimOlderMessages(); 
+                const systemText = line.replace('<system:', '').replace('>', '').trim();
+                const div = document.createElement('div');
+                div.className = 'system-msg'; div.innerText = systemText;
+                chatScroller.appendChild(div);
+                lastUser = null;
+                await new Promise(r => setTimeout(r, 1500));
+            } 
+            // --- 2. HANDLE REGULAR MESSAGES (V41 FULL LOGIC) ---
+            else {
+                const match = line.match(/\[(.*?)\]:\s*(.*)/);
+                if (!match) return;
 
-            const block = document.createElement('div');
-            block.className = `msg-block ${isCompact ? 'compact' : ''}`;
-            
-            // Audio check for Chrome Autoplay policies
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            messageSound.currentTime = 0; messageSound.play();
+                dimOlderMessages(); // Focus Engine Dimming
 
-            let html = '';
-            if (!isCompact) {
-                html += `<div class="avatar-container">
-                            <img class="avatar" src="assets/pfps/${user}.png" onerror="this.onerror=null; this.src='assets/pfps/${user.toLowerCase()}.png'; this.onerror=function(){this.src='assets/pfps/default.png'};">
-                            <div class="status-dot"></div>
-                         </div>`;
-                html += `<div class="msg-body">
-                            <div class="user-header">
-                                <span class="username" style="color:${getUserColor(user)}">${user}</span>
-                                <span class="timestamp">Today at ${getSimulatedTime(idx)}</span>
-                            </div>`;
-            } else { html += `<div class="msg-body">`; }
+                const user = match[1].trim();
+                const content = match[2].trim();
+                const mediaMatch = content.match(/<media:\s*(.*?)\s*>/);
+                const isCompact = (lastUser && lastUser.toLowerCase() === user.toLowerCase());
 
-            if (mediaMatch) {
-                const fileName = mediaMatch[1];
-                const src = assetCache[fileName] || "";
-                const isVideo = fileName.match(/\.(mp4|webm|mov)$/i);
-
-                if (isVideo && src) {
-                    const player = document.getElementById('overlay-player');
-                    player.muted = false; // Ensure it's not muted for recording
-                    player.src = src; player.style.display = 'block';
-                    await player.play();
-                    await new Promise(res => {
-                        player.onended = () => { player.style.display = 'none'; res(); };
-                        setTimeout(() => { player.style.display = 'none'; res(); }, 15000);
-                    });
-                    html += `<video class="media-thumbnail" src="${src}" controls></video>`;
-                } else {
-                    html += `<img class="media-gif" src="${src}">`;
+                if (!isCompact) {
+                    document.getElementById('typer-name').innerText = user;
+                    document.getElementById('typing-box').style.display = 'block';
+                    await new Promise(r => setTimeout(r, 1000));
+                    document.getElementById('typing-box').style.display = 'none';
                 }
-                block.innerHTML += html + `</div>`;
-                chatScroller.appendChild(block);
-                await new Promise(r => setTimeout(r, 3000));
 
-            } else {
-                html += `<div class="text-content">${content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>')}</div></div>`;
-                block.innerHTML += html;
-                chatScroller.appendChild(block);
-                const delay = Math.max(2000, content.length * 80);
-                await new Promise(r => setTimeout(r, delay));
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+                messageSound.currentTime = 0; messageSound.play();
+
+                const block = document.createElement('div');
+                block.className = `msg-block ${isCompact ? 'compact' : ''}`;
+                
+                let html = '';
+                if (!isCompact) {
+                    // PFP LOGIC FROM V41 with PFP PICKER
+                    const pfpSrc = pfpCache[user] || `assets/pfps/${user}.png`;
+                    html += `<div class="avatar-container">
+                                <img class="avatar" src="${pfpSrc}" onerror="this.onerror=null; this.src='assets/pfps/${user.toLowerCase()}.png'; this.onerror=function(){this.src='assets/pfps/default.png'};">
+                                <div class="status-dot"></div>
+                             </div>`;
+                    html += `<div class="msg-body">
+                                <div class="user-header">
+                                    <span class="username" style="color:${getUserColor(user)}">${user}</span>
+                                    <span class="timestamp">Today at ${getSimulatedTime(idx)}</span>
+                                </div>`;
+                } else { html += `<div class="msg-body">`; }
+
+                if (mediaMatch) {
+                    const fileName = mediaMatch[1];
+                    const src = assetCache[fileName] || "";
+                    const isVideo = fileName.match(/\.(mp4|webm|mov)$/i);
+
+                    if (isVideo && src) {
+                        const player = document.getElementById('overlay-player');
+                        player.muted = false; player.src = src; player.style.display = 'block';
+                        await player.play();
+                        await new Promise(res => {
+                            player.onended = () => { player.style.display = 'none'; res(); };
+                            setTimeout(() => { player.style.display = 'none'; res(); }, 15000);
+                        });
+                        html += `<video class="media-thumbnail" src="${src}" controls></video>`;
+                    } else {
+                        html += `<img class="media-gif" src="${src}">`;
+                    }
+                    block.innerHTML += html + `</div>`;
+                    chatScroller.appendChild(block);
+                    await new Promise(r => setTimeout(r, 3000));
+                } else {
+                    // V41 MENTION HIGHLIGHTING LOGIC
+                    const highlightedContent = content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>');
+                    html += `<div class="text-content">${highlightedContent}</div></div>`;
+                    block.innerHTML = html;
+                    chatScroller.appendChild(block);
+                    
+                    // V41 AUTO-PLAY DURATION CALCULATION
+                    const delay = Math.max(2000, content.length * 80);
+                    await new Promise(r => setTimeout(r, delay));
+                }
+                lastUser = user;
             }
-
             chatScroller.scrollTo({ top: chatScroller.scrollHeight, behavior: 'smooth' });
-            lastUser = user;
         }
 
         async function autoPlay() {
-            for (let i = 0; i < script.length; i++) {
-                index = i; await render(i);
-            }
-            // Stop recorder once script ends
-            if(audioRecorder && audioRecorder.state !== "inactive") {
-                audioRecorder.stop();
-            }
+            for (let i = 0; i < script.length; i++) await render(i);
+            if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
         }
 
         function adjustScale() {
-            const scale = Math.min((window.innerWidth - 20) / 1080, (window.innerHeight - 120) / 1920);
+            const scale = Math.min((window.innerWidth - 40) / 1920, (window.innerHeight - 40) / 1080);
             document.getElementById('scale-wrapper').style.transform = `scale(${scale})`;
         }
         window.addEventListener('resize', adjustScale);
