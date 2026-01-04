@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Landscape V71 - Full Asset & Focus Engine</title>
+    <title>Discord Landscape V72 - Smart Asset Engine</title>
     <style>
         :root {
             --bg-color: #36393f;
@@ -36,7 +36,7 @@
 
         #chat-scroller { flex: 1; padding: 60px 100px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; z-index: 5; scroll-behavior: smooth; }
 
-        /* V41 MESSAGE BLOCK LOGIC + FOCUS ENGINE */
+        /* V41 MESSAGE STYLE + FOCUS ENGINE */
         .msg-block { display: flex; margin-top: 45px; animation: fadeIn 0.15s; position: relative; transition: filter 0.5s, opacity 0.5s; }
         .msg-block.compact { margin-top: 8px; padding-left: 110px; }
         .msg-block.dimmed { filter: blur(3px); opacity: 0.45; }
@@ -58,7 +58,7 @@
 
         .text-content { font-size: 44px; color: var(--text-color); line-height: 1.35; word-wrap: break-word; white-space: pre-wrap; margin: 0; }
         
-        /* SYSTEM MESSAGE */
+        /* SYSTEM MESSAGE STYLING */
         .system-msg { width: 100%; text-align: center; color: var(--system-yellow); font-size: 34px; margin: 30px 0; font-style: italic; animation: fadeIn 0.3s; transition: opacity 0.5s, filter 0.5s; }
         .system-msg.dimmed { opacity: 0.4; filter: blur(2px); }
 
@@ -68,7 +68,7 @@
 
         #countdown-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 30000; justify-content: center; align-items: center; font-size: 300px; font-weight: bold; color: var(--blurple); }
 
-        /* ASSET PICKER UI */
+        /* V41 ASSET PICKER */
         #overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 20000; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .modal-box { background: #2f3136; padding: 40px; border-radius: 20px; width: 80%; text-align: center; max-height: 85vh; overflow-y: auto;}
         textarea { width: 100%; height: 280px; background: #40444b; color: white; border-radius: 10px; padding: 20px; font-size: 24px; border:none; margin-bottom: 20px; }
@@ -85,22 +85,23 @@
 
     <div id="overlay">
         <div class="modal-box">
-            <h2>📜 Script & Full Sync Engine V71</h2>
-            <textarea id="scriptInput" placeholder="[User]: Hi!&#10;<system: System Message>&#10;[User]: <media:pic.png>"></textarea>
-            <button onclick="scanAssets()">Scan All Assets ➡️</button>
+            <h2>📜 Script & Advance Sync V72</h2>
+            <textarea id="scriptInput" placeholder="[Delulu]: Everything is case-insensitive!&#10;<system: System Notification>&#10;[User]: <media:pic.png>"></textarea>
+            <button onclick="scanAssets()">Scan Assets & Prepare ➡️</button>
         </div>
     </div>
 
     <div id="asset-modal" class="modal" style="display:none;">
         <div class="modal-box">
-            <h2>🖼️ V41 Asset Preloader (Media & PFPs)</h2>
+            <h2>🖼️ Asset Preloader</h2>
             <div class="asset-grid">
                 <div class="asset-group">
                     <h3 style="color:var(--blurple)">📦 Script Media</h3>
                     <div id="media-list"></div>
                 </div>
                 <div class="asset-group">
-                    <h3 style="color:#3ba55d">👤 User PFPs</h3>
+                    <h3 style="color:#3ba55d">👤 User PFPs (Optional)</h3>
+                    <p style="font-size:16px; color:#72767d; margin-bottom:10px;">Only upload if the file is NOT in assets/pfps/</p>
                     <div id="pfp-list"></div>
                 </div>
             </div>
@@ -137,7 +138,7 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        // V41 TIME SIMULATION LOGIC
+        // V41 TIME SIMULATION
         function getSimulatedTime(idx) {
             if (idx > 0 && idx % 3 === 0) {
                 chatClock.setMinutes(chatClock.getMinutes() + Math.floor(Math.random() * 2) + 1);
@@ -145,7 +146,7 @@
             return chatClock.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
-        // --- COMPLETE V41 SCAN + PICKER LOGIC ---
+        // --- SCAN ASSETS & PFP LIST ---
         function scanAssets() {
             const text = document.getElementById('scriptInput').value;
             script = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -161,16 +162,14 @@
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('asset-modal').style.display = 'flex';
             
-            // Media List Picker
             const mList = document.getElementById('media-list');
-            mList.innerHTML = mediaFiles.size ? "" : "No media files found in script.";
+            mList.innerHTML = mediaFiles.size ? "" : "No media files found.";
             mediaFiles.forEach(file => {
                 const div = document.createElement('div'); div.style.marginBottom = "10px";
                 div.innerHTML = `<label>Upload <b>${file}</b>:</label><br><input type="file" onchange="processFile('${file}', this, 'media')">`;
                 mList.appendChild(div);
             });
 
-            // PFP List Picker
             const pList = document.getElementById('pfp-list');
             pList.innerHTML = "";
             uniqueUsers.forEach(user => {
@@ -193,7 +192,7 @@
             }
         }
 
-        // --- SYNC RECORDING + FULLSCREEN ENGINE ---
+        // --- AUDIO SYNC & FULLSCREEN ---
         async function initProductionFlow() {
             try {
                 const frame = document.getElementById('render-frame');
@@ -235,7 +234,7 @@
             }, 1000);
         }
 
-        // --- FOCUS ENGINE: DIM PREVIOUS MESSAGES ---
+        // --- FOCUS ENGINE ---
         function dimOlderMessages() {
             const messages = document.querySelectorAll('.msg-block, .system-msg');
             messages.forEach(msg => msg.classList.add('dimmed'));
@@ -245,9 +244,9 @@
             const line = script[idx];
             const chatScroller = document.getElementById('chat-scroller');
 
-            // --- 1. HANDLE SYSTEM MESSAGES ---
+            // --- 1. SYSTEM MESSAGES ---
             if (line.startsWith('<system:')) {
-                dimOlderMessages(); 
+                dimOlderMessages();
                 const systemText = line.replace('<system:', '').replace('>', '').trim();
                 const div = document.createElement('div');
                 div.className = 'system-msg'; div.innerText = systemText;
@@ -255,12 +254,12 @@
                 lastUser = null;
                 await new Promise(r => setTimeout(r, 1500));
             } 
-            // --- 2. HANDLE REGULAR MESSAGES (V41 FULL LOGIC) ---
+            // --- 2. REGULAR MESSAGES (V41 LOGIC) ---
             else {
                 const match = line.match(/\[(.*?)\]:\s*(.*)/);
                 if (!match) return;
 
-                dimOlderMessages(); // Focus Engine Dimming
+                dimOlderMessages();
 
                 const user = match[1].trim();
                 const content = match[2].trim();
@@ -282,10 +281,13 @@
                 
                 let html = '';
                 if (!isCompact) {
-                    // PFP LOGIC FROM V41 with PFP PICKER
+                    // --- SMART PFP FALLBACK (CASE-INSENSITIVE) ---
                     const pfpSrc = pfpCache[user] || `assets/pfps/${user}.png`;
                     html += `<div class="avatar-container">
-                                <img class="avatar" src="${pfpSrc}" onerror="this.onerror=null; this.src='assets/pfps/${user.toLowerCase()}.png'; this.onerror=function(){this.src='assets/pfps/default.png'};">
+                                <img class="avatar" src="${pfpSrc}" 
+                                     onerror="this.onerror=null; this.src='assets/pfps/${user.toLowerCase()}.png'; 
+                                     this.onerror=function(){this.src='assets/pfps/${user.toUpperCase()}.png'; 
+                                     this.onerror=function(){this.src='assets/pfps/default.png'};};">
                                 <div class="status-dot"></div>
                              </div>`;
                     html += `<div class="msg-body">
@@ -316,13 +318,13 @@
                     chatScroller.appendChild(block);
                     await new Promise(r => setTimeout(r, 3000));
                 } else {
-                    // V41 MENTION HIGHLIGHTING LOGIC
+                    // MENTION HIGHLIGHTING
                     const highlightedContent = content.replace(/(@\w+)/g, '<span style="color:#00aff4; background:rgba(0,175,244,0.1); padding:0 5px; border-radius:5px;">$1</span>');
                     html += `<div class="text-content">${highlightedContent}</div></div>`;
                     block.innerHTML = html;
                     chatScroller.appendChild(block);
                     
-                    // V41 AUTO-PLAY DURATION CALCULATION
+                    // AUTO-PLAY DELAY LOGIC
                     const delay = Math.max(2000, content.length * 80);
                     await new Promise(r => setTimeout(r, delay));
                 }
